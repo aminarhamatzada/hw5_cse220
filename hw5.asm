@@ -105,8 +105,7 @@ init_student_array:
 		
 		inner_loop:
 		
-			# lb to extract name 
-			lbu $t1, 0($s3)
+			lbu $t1, 0($s3)	# lbu to extract name 
 			 
 			# compare to 0, if zero branch to inner done
 			# if not move char array over one (addi), then j inner_loop
@@ -114,9 +113,6 @@ init_student_array:
 			beqz $t1, inner_done		# exit if name is '\0'
 
 			addi $s3, $s3, 1	# increment names pointer
-
-			#sll $s6, $s5, 3  	# multiply loop counter by 8
-        	#add $t7, $t4, $t6	# calculate address 
 			
 			j inner_loop
 		
@@ -160,27 +156,53 @@ insert:
 	# loop for linear probing #
 
 	li $t4, 0 		# loop counter
+	move $t6, $a1	# put a1 in temp variable
+	li $t8, -1   #this is tombstone value 
 
 	loop_linear_probing :
 
-		sll $t2, $t1, 3 	# calculate offset for hash index
-		add $t3, $a1, $t2 	# calculate address in table
-
+		sll $t2, $t1, 2 	# t2=offset calculate offset for hash index
+		add $t3, $t6, $t2 	# t3=base address calculate address in table
 		lw $t5, 0($t3)		# load value from hash table
 
-		addi $t1, $t1, 1	# increment hash index
+		# TODO: beq to check if the counter is the size of the table (if table is full)
+		
+		beq $t4, $a2, error #when its full, goes to error 
+		beq $t5, $t8, record 
+		beq $t5, $zero, record
+	
+
+		# TODO: bne if statement hash index reaches the end, we have to loop around, reset address to og, in this case use a1 (set t3 to a1)
+        
+		beq $t1, $a2, reset_index
+		
 		addi $t4, $t4, 1	# increment counter
 
+    	#bne $t1, $a1, loop_linear_probing #TODO: if end the loop, jump and -1
 
-    	bne $t4, $a2, loop_linear_probing 
+		addi $t1, $t1, 1	# increment hash index this is our original index 
+		j loop_linear_probing
+
+
+		reset_index:
+			li $t1, 0
+			addi $t4, $t4, 1	# increment counter
+			j loop_linear_probing
 
 		# check if table is full, return -1 #
-		li $v0, -1			# returns -1
+		#li $v0, -1			# returns -1
+
+		# j loop_linear_probing
 
 	record: 
-
 		sw $a0, 0($t3)      # insert record into hash table
     	move $v0, $t1       # return index
+		j done_inserting
+
+	error: 
+		li $v0, -1       
+	
+	done_inserting:
 
 	jr $ra
 	
@@ -190,7 +212,13 @@ search:
 
 	# use branch to return something if we fail $v0 #
 
+	li $v0, 0
+	li $v1, -1
+
 	jr $ra
 
 delete:
+
+	li $v0, -1
+
 	jr $ra
